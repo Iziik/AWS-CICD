@@ -36,7 +36,7 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: 'AWS-CICD/package-lock.json'  # Specify path for cache
+        cache-dependency-path: 'package-lock.json'  # Specify path for cache
     
     - name: Install dependencies
       run: npm ci
