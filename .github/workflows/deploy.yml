@@ -27,16 +27,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: List Files for Debug
-        run: find . -maxdepth 2 -name "package-lock.json"
+      # Manual cache avoids the "paths not resolved" error by being explicit
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('AWS-CICD/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
-          # Use the absolute path relative to the root of the repo
-          cache-dependency-path: "**/package-lock.json"
 
       - name: Install dependencies
         run: npm ci
@@ -57,7 +60,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
-    # Set default directory so we don't have to repeat 'working-directory'
     defaults:
       run:
         working-directory: AWS-CICD
@@ -99,7 +101,7 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          # Path is now relative to the 'defaults' working directory
+          # Because of 'defaults' above, we are already inside AWS-CICD/
           task-definition: AWS-CICD/task-definition.json
           container-name: webapp
           image: ${{ steps.build-image.outputs.image }}
@@ -116,33 +118,11 @@ jobs:
         run: |
           echo "Waiting for service to stabilize..."
           sleep 30
-
-          TASK_ARN=$(aws ecs list-tasks \
-            --cluster $ECS_CLUSTER \
-            --service-name $ECS_SERVICE \
-            --query 'taskArns[0]' \
-            --output text)
-
+          TASK_ARN=$(aws ecs list-tasks --cluster $ECS_CLUSTER --service-name $ECS_SERVICE --query 'taskArns[0]' --output text)
           if [ "$TASK_ARN" != "None" ] && [ -n "$TASK_ARN" ]; then
-            NETWORK_INTERFACE_ID=$(aws ecs describe-tasks \
-              --cluster $ECS_CLUSTER \
-              --tasks $TASK_ARN \
-              --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-              --output text)
-
-            PUBLIC_IP=$(aws ec2 describe-network-interfaces \
-              --network-interface-ids $NETWORK_INTERFACE_ID \
-              --query 'NetworkInterfaces[0].Association.PublicIp' \
-              --output text)
-
-            if [ -n "$PUBLIC_IP" ] && [ "$PUBLIC_IP" != "None" ]; then
-              echo ""
-              echo "🚀 Deployment successful!"
-              echo "📱 App: http://$PUBLIC_IP:3001"
-              echo ""
-            else
-              echo "❌ Public IP not found."
-            fi
+            NETWORK_INTERFACE_ID=$(aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
+            PUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+            echo "🚀 Deployment successful! App: http://$PUBLIC_IP:3001"
           else
             echo "❌ No running ECS task found."
           fi
