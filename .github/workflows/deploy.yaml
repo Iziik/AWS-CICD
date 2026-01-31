@@ -36,7 +36,7 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: '**/package-lock.json'  # Specify path for cache
+        cache-dependency-path: AWS-CICD/package-lock.json  # Specify path for cache
     
     - name: Install dependencies
       run: npm ci
@@ -82,7 +82,7 @@ jobs:
       run: |
         # Build Docker image
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         
         # Push to ECR
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
