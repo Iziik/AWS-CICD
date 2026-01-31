@@ -30,9 +30,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
           cache: 'npm'
-          # Fixed the caching error by pointing to the subdirectory lockfile
+          # Use the absolute path relative to the root of the repo
           cache-dependency-path: AWS-CICD/package-lock.json
 
       - name: Install dependencies
