@@ -27,6 +27,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: List Files for Debug
+        run: find . -maxdepth 2 -name "package-lock.json"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
