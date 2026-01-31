@@ -27,12 +27,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Setup Node.js with proper working-directory and cache
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
+          # Fixed the caching error by pointing to the subdirectory lockfile
+          cache-dependency-path: AWS-CICD/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -53,6 +54,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
+    # Set default directory so we don't have to repeat 'working-directory'
+    defaults:
+      run:
+        working-directory: AWS-CICD
 
     steps:
       - name: Checkout code
@@ -80,19 +85,18 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-        working-directory: AWS-CICD
 
       - name: Download task definition
         run: |
           aws ecs describe-task-definition \
             --task-definition $ECS_TASK_DEFINITION \
             --query taskDefinition > task-definition.json
-        working-directory: AWS-CICD
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
+          # Path is now relative to the 'defaults' working directory
           task-definition: AWS-CICD/task-definition.json
           container-name: webapp
           image: ${{ steps.build-image.outputs.image }}
@@ -132,12 +136,7 @@ jobs:
               echo ""
               echo "🚀 Deployment successful!"
               echo "📱 App: http://$PUBLIC_IP:3001"
-              echo "🏥 Health: http://$PUBLIC_IP:3001/health"
-              echo "📊 API: http://$PUBLIC_IP:3001/api/info"
               echo ""
-              echo "📋 AWS Console:"
-              echo "ECS Service: https://console.aws.amazon.com/ecs/home?region=$AWS_REGION#/clusters/$ECS_CLUSTER/services/$ECS_SERVICE"
-              echo "CloudWatch Logs: https://console.aws.amazon.com/cloudwatch/home?region=$AWS_REGION#logsV2"
             else
               echo "❌ Public IP not found."
             fi
