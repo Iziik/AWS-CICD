@@ -30,13 +30,18 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
+
+    - run: |
+              ls -la
+               ls -la AWS-CICD
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: 'package-lock.json'  # Specify path for cache
+        # Specify path for cache
     
     - name: Install dependencies
       run: npm ci
