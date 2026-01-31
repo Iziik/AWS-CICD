@@ -27,11 +27,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 🔧 FIX: setup-node must be told where the lockfile lives
+      # ✅ Setup Node.js with proper working-directory and cache
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' 
+          node-version: '18'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
