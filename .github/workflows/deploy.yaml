@@ -36,7 +36,7 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: './AWS-CICD/package-lock.json'  # Specify path for cache
+        cache-dependency-path: 'AWS-CICD/package-lock.json'  # Specify path for cache
     
     - name: Install dependencies
       run: npm ci
@@ -80,9 +80,9 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Build Docker image from project-2 directory
+        # Build Docker image
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest .
         
         # Push to ECR
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -100,7 +100,7 @@ jobs:
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-        task-definition: ./AWS-CICD/task-definition.json  # Specify full path
+        task-definition: task-definition.json  # Specify full path
         container-name: webapp  # Make sure this matches your container name in task definition
         image: ${{ steps.build-image.outputs.image }}
     
@@ -137,7 +137,8 @@ jobs:
             --network-interface-ids $NETWORK_INTERFACE_ID \
             --query 'NetworkInterfaces[0].Association.PublicIp' \
             --output text)
-          
+
+            if [ -n "$PUBLIC_IP" ] && [ "$PUBLIC_IP" != "None" ]; then
           echo ""
           echo "🚀 Deployment successful!"
           echo "📱 Your app is live at: http://$PUBLIC_IP:3001"
@@ -150,4 +151,5 @@ jobs:
           echo ""
         else
           echo "❌ Could not get task information. Check ECS console for details."
+          fi
         fi
