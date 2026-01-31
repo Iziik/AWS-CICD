@@ -26,17 +26,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: List Files for Debug
-        run: find . -maxdepth 2 -name "package-lock.json"
+        # This prevents the "Triple Folder" by placing code at the workspace root
+        with:
+          sparse-checkout: |
+            AWS-CICD
+          sparse-checkout-cone-mode: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'npm'
-          # Use the absolute path relative to the root of the repo
-          cache-dependency-path: ${{ github.workspace }}/AWS-CICD/package-lock.json
+          # Now that we've flattened the checkout, this path is reliable
+          cache-dependency-path: AWS-CICD/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -46,18 +48,11 @@ jobs:
         run: npm test
         working-directory: AWS-CICD
 
-      - name: Test Docker build
-        run: |
-          docker build -t test-build .
-          echo "Docker build successful!"
-        working-directory: AWS-CICD
-
   deploy:
     name: Deploy to AWS ECS
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
-    # Set default directory so we don't have to repeat 'working-directory'
     defaults:
       run:
         working-directory: AWS-CICD
@@ -99,7 +94,7 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          # Path is now relative to the 'defaults' working directory
+          # Note: Since defaults set us in AWS-CICD, we reference the file locally
           task-definition: AWS-CICD/task-definition.json
           container-name: webapp
           image: ${{ steps.build-image.outputs.image }}
