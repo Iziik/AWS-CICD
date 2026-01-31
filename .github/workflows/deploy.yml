@@ -33,7 +33,7 @@ jobs:
           node-version: 18
           cache: 'npm'
           # Use the absolute path relative to the root of the repo
-          cache-dependency-path: AWS-CICD/package-lock.json
+          cache-dependency-path: "**/package-lock.json"
 
       - name: Install dependencies
         run: npm ci
